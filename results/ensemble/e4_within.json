@@ -1,0 +1,9 @@
+{
+ "baseline": "mapa12",
+ "candidate": "ensemble:cc49ff955fa0ae88",
+ "decision": "Go",
+ "delta": 0.008335034377736096,
+ "n_subjects": 6,
+ "p_signflip": 0.046875,
+ "subjects_up": 5
+}

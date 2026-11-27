@@ -1,0 +1,4 @@
+{
+  "decision": "blocked",
+  "reason": "Command '('/home/jake/runs/neuroprobe-experiments/releases/93919c3eff96a7e6b43b4b9dc56b9c4f9d3c72d0/.venv/bin/python', '-u', '-m', 'ensemble.run', 'export', '--tier', 'V', '--regime', 'within', '--members', 'mapa12')' returned non-zero exit status 1."
+}

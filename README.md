@@ -42,6 +42,7 @@ disclosures and the results per session and per task. Its source is `paper/note.
 | `classical/` | The classical-feature track, which did not qualify and is kept for the record |
 | `server/` | Freeze in `overnight_freeze.py`, confirmation in `overnight_confirm.py`, the single-class amendment, setup and sync |
 | `frozen-designs/within.json` | The frozen within-session design, config `cc49ff955fa0ae88` |
+| `results/` | Audit trail: hash-chained `ledger.csv` (381 rows), `test_access.log`, overnight confirmation and amendment receipts, E1–E5 summaries, Tier P parity receipt, and `submission/export_t_within.py` |
 | `submission/` | The leaderboard folder submitted to Neuroprobe |
 | `01-*.md` to `08-*.md` | Plans, rule verdicts and audits written before and during the runs |
 

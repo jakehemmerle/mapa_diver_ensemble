@@ -1,0 +1,64 @@
+{
+ "baseline": "mapa12",
+ "candidate": "ens_a__diver+mapa12",
+ "controls_pass": true,
+ "decision": "Hold",
+ "dropped": [],
+ "e1_passed": true,
+ "gain_over_best_member": 0.005460275670046717,
+ "leave_one_member_out": {
+  "diver": {
+   "contribution": 0.005460275670046717,
+   "keep": true,
+   "without": "mapa12"
+  },
+  "mapa12": {
+   "contribution": 0.0239894276709838,
+   "keep": true,
+   "without": "diver"
+  }
+ },
+ "mapa_pretraining_split": {
+  "held_out_5_0": {
+   "delta": 0.01804664982803876,
+   "n_subjects": 1,
+   "score": 0.7306121746760443
+  },
+  "pretraining_sessions": {
+   "delta": 0.003662222218904996,
+   "n_subjects": 7,
+   "score": 0.6972230053160053
+  }
+ },
+ "members": [
+  "diver",
+  "mapa12"
+ ],
+ "regime": "within",
+ "rung": "a",
+ "self_ensemble": {
+  "gain": -0.006177876581111921,
+  "ran": true,
+  "score": 0.6897584992348516
+ },
+ "self_ensemble_margin": 0.011638152251158638,
+ "self_ensemble_pass": true,
+ "shuffled_stacker_pass": true,
+ "subject_concentration": {
+  "carried_by": [],
+  "delta": 0.005460275670046717,
+  "leave_one_subject_out": {
+   "1": 0.006703693009538937,
+   "2": 0.005709439692098987,
+   "3": 0.005965760504978573,
+   "4": 0.004504093502480761,
+   "5": 0.003662222218904996,
+   "6": 0.00728454676752851,
+   "8": 0.0053294635548013026,
+   "9": 0.0045229861100416656
+  }
+ },
+ "table_decision": "Hold",
+ "tier_p_gain": 0.005460275670046717,
+ "wave": 2
+}

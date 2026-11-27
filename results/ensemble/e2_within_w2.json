@@ -1,0 +1,14 @@
+{
+ "members": [
+  "diver",
+  "mapa12"
+ ],
+ "penalty": 0.01,
+ "regime": "within",
+ "rung": "a",
+ "shuffled_delta": -2.867479126044059e-05,
+ "shuffled_passed": true,
+ "stacker_gain": 0.0022614391466403714,
+ "threshold": 0.003,
+ "wave": 2
+}

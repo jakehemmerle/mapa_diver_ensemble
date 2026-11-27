@@ -1,0 +1,114 @@
+{
+ "baseline": "mapa12",
+ "best": {
+  "best_member": "mapa12",
+  "decision": "Hold",
+  "delta_vs_baseline": 0.005460275670046717,
+  "gain_over_best_member": 0.005460275670046717,
+  "members": [
+   "diver",
+   "mapa12"
+  ],
+  "name": "ens_a__diver+mapa12",
+  "score": 0.7013966514860102
+ },
+ "leave_one_member_out": {
+  "diver": {
+   "contribution": 0.005460275670046717,
+   "keep": true,
+   "without": "mapa12"
+  },
+  "mapa12": {
+   "contribution": 0.0239894276709838,
+   "keep": true,
+   "without": "diver"
+  }
+ },
+ "mapa_pretraining_split": {
+  "held_out_5_0": {
+   "delta": 0.01804664982803876,
+   "n_subjects": 1,
+   "score": 0.7306121746760443
+  },
+  "pretraining_sessions": {
+   "delta": 0.003662222218904996,
+   "n_subjects": 7,
+   "score": 0.6972230053160053
+  }
+ },
+ "passed": true,
+ "pool": [
+  "mapa12",
+  "ridge6",
+  "diver"
+ ],
+ "pool_restricted_to": [
+  "mapa12",
+  "ridge6",
+  "diver"
+ ],
+ "regime": "within",
+ "self_ensemble": {
+  "gain": -0.006177876581111921,
+  "ran": true,
+  "score": 0.6897584992348516
+ },
+ "single": {
+  "diver": 0.6774072238150264,
+  "mapa12": 0.6959363758159635,
+  "ridge6": 0.6740242372321634
+ },
+ "subsets": [
+  {
+   "best_member": "mapa12",
+   "decision": "Hold",
+   "delta_vs_baseline": 0.005460275670046717,
+   "gain_over_best_member": 0.005460275670046717,
+   "members": [
+    "diver",
+    "mapa12"
+   ],
+   "name": "ens_a__diver+mapa12",
+   "score": 0.7013966514860102
+  },
+  {
+   "best_member": "diver",
+   "decision": "Stop",
+   "delta_vs_baseline": -0.0064418446071321305,
+   "gain_over_best_member": 0.012087307393804954,
+   "members": [
+    "diver",
+    "ridge6"
+   ],
+   "name": "ens_a__diver+ridge6",
+   "score": 0.6894945312088313
+  },
+  {
+   "best_member": "mapa12",
+   "decision": "Stop",
+   "delta_vs_baseline": -8.903980413233858e-05,
+   "gain_over_best_member": -8.903980413233858e-05,
+   "members": [
+    "mapa12",
+    "ridge6"
+   ],
+   "name": "ens_a__mapa12+ridge6",
+   "score": 0.6958473360118311
+  },
+  {
+   "best_member": "mapa12",
+   "decision": "Hold",
+   "delta_vs_baseline": 0.005239311620024169,
+   "gain_over_best_member": 0.005239311620024169,
+   "members": [
+    "diver",
+    "mapa12",
+    "ridge6"
+   ],
+   "name": "ens_a__diver+mapa12+ridge6",
+   "score": 0.7011756874359876
+  }
+ ],
+ "threshold": 0.005,
+ "wave": 2
+}

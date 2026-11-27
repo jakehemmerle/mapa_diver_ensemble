@@ -1,0 +1,177 @@
+{
+  "commit": "6201eca1202fcc57665af3c7ad685d1d19db6ac0",
+  "independent_full_heads": true,
+  "passed": true,
+  "regimes": {
+    "cross_session": {
+      "cells": [
+        {
+          "b_refused": true,
+          "cell": "btbank2_2__btbank2_1__onset__f0",
+          "scores": {
+            "diver/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9734832553297479,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9734832553297479
+            },
+            "diver/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.952213482241134,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.952213482241134
+            },
+            "ens_a__diver+mapa12/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9815088249945562,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9815088249945562
+            },
+            "ens_a__diver+mapa12/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9586953863041812,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9586953863041812
+            }
+          }
+        },
+        {
+          "b_refused": true,
+          "cell": "btbank2_2__btbank2_1__face_num__f0",
+          "scores": {
+            "diver/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.5350654693877551,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.5350654693877551
+            },
+            "diver/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.5755735510204082,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.5755735510204082
+            },
+            "ens_a__diver+mapa12/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.581952,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.581952
+            },
+            "ens_a__diver+mapa12/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.585917387755102,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.585917387755102
+            }
+          }
+        }
+      ],
+      "passed": true,
+      "profiles": {
+        "full": {
+          "fits": {
+            "0": 2,
+            "1": 2,
+            "2": 2,
+            "3": 2,
+            "4": 2,
+            "5": 2
+          },
+          "seconds": 511.43898850213736
+        },
+        "quick": {
+          "fits": {
+            "0": 2
+          },
+          "seconds": 131.57782048312947
+        }
+      }
+    },
+    "within": {
+      "cells": [
+        {
+          "b_refused": true,
+          "cell": "btbank1_0__btbank1_0__onset__f0",
+          "scores": {
+            "diver/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9501806640625,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9501806640625
+            },
+            "diver/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9586794670846395,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9586794670846395
+            },
+            "ens_a__diver+mapa12/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.97333984375,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.97333984375
+            },
+            "ens_a__diver+mapa12/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.9743926332288402,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.9743926332288402
+            }
+          }
+        },
+        {
+          "b_refused": true,
+          "cell": "btbank1_0__btbank1_0__face_num__f0",
+          "scores": {
+            "diver/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.48618904318568906,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.48618904318568906
+            },
+            "diver/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.5842319467519305,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.5842319467519305
+            },
+            "ens_a__diver+mapa12/eval": {
+              "auc_gap": 0.0,
+              "full_auc": 0.4727751481144792,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.4727751481144792
+            },
+            "ens_a__diver+mapa12/select": {
+              "auc_gap": 0.0,
+              "full_auc": 0.5974473109515898,
+              "max_score_gap": 0.0,
+              "quick_auc": 0.5974473109515898
+            }
+          }
+        }
+      ],
+      "passed": true,
+      "profiles": {
+        "full": {
+          "fits": {
+            "0": 2,
+            "1": 2,
+            "2": 2,
+            "3": 2,
+            "4": 2,
+            "5": 2
+          },
+          "seconds": 152.6186856920831
+        },
+        "quick": {
+          "fits": {
+            "0": 2
+          },
+          "seconds": 29.984265173319727
+        }
+      }
+    }
+  },
+  "tier": "P",
+  "tolerance": 1e-06
+}
