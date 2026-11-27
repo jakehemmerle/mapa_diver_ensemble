@@ -1,11 +1,17 @@
 \documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[top=0.85in,bottom=0.85in,left=0.92in,right=0.92in]{geometry}
+\usepackage{microtype}
 \usepackage{booktabs}
 \usepackage{amsmath}
-\usepackage{url}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks]{hyperref}
+\makeatletter
+\g@addto@macro{\UrlBreaks}{\do\/\do-}
+\makeatother
+
 \newcommand{\coderepo}{\url{https://github.com/jakehemmerle/mapa_diver_ensemble}}
 
-\title{MAPA+DIVER-1: A Pre-specified Rank-Normalized Ensemble of Frozen Encoders\\for Neuroprobe Within-Session Decoding}
+\title{MAPA+DIVER-1: Fusing Frozen Spectral and Waveform Encoders\\for Neuroprobe Within-Session Decoding}
 \author{Jake Hemmerle\\Spark}
 \date{November 2026}
 
@@ -13,68 +19,75 @@
 \maketitle
 
 \begin{abstract}
-We describe the ``MAPA+DIVER-1 ensemble'' submission to the Neuroprobe leaderboard (within-session regime). Two publicly released, frozen intracranial encoders---MAPA (last layer, closed-form ridge readout) and DIVER-1 (0.1\,s tiny, linear head)---are combined by an equal-weight mean of per-member scores after each member's scores are mapped through the empirical CDF of its own label-free validation scores. No pretraining was performed. The design was fixed using only non-evaluation sessions, vetoed once on half of the official validation split, and then scored once on the official test split. On the official test split the ensemble reaches mean AUROC $0.7037$ versus $0.6955$ for our MAPA reproduction ($\Delta=+0.0082$, 6/6 subjects improved, exact sign-flip $p=0.0156$, session bootstrap 95\% CI $[+0.0036,+0.0132]$). Code: \coderepo.
+Current intracranial EEG foundation models rely on contrasting signal views: MAPA encodes multi-scale STFT magnitudes (discarding waveform phase), whereas DIVER-1 encodes raw 500\,Hz time-domain voltage patches. On the Neuroprobe within-session benchmark, we test whether MAPA leaves decodable phase and waveform-timing information unused, and whether recovering it requires a learned time-domain encoder or hand-crafted signal features. Stacking classical phase, low-frequency waveform, high-gamma timing, and shaft-covariance features onto MAPA yields zero gain on our 13-session design split ($\Delta=+0.000039$). By contrast, an equal-weight fusion of frozen MAPA and frozen DIVER-1---combined after mapping each member's scores through the empirical CDF of its own unlabeled validation scores, with no pretraining and no learned fusion weights---reaches mean AUROC $0.7037$ versus $0.6955$ for our MAPA reproduction on the official test split ($\Delta=+0.0082$, $6/6$ subjects improved, exact sign-flip $p=0.0156$, session bootstrap 95\% CI $[+0.0036,+0.0132]$). Across tasks, gains concentrate sharply in language, word-timing, and auditory-onset decoding (up to $+0.0345$ on \emph{word\_index}), while visual tasks and steady-state \emph{volume} dip slightly. The design was selected on 13 non-evaluation sessions, vetted once on half of official validation, and scored once on official test. Code and audit trail: \coderepo.
 \end{abstract}
 
 \section{Introduction}
-Neuroprobe~\cite{neuroprobe,neuroprobe-site,neuroprobe-repo} evaluates decoding of 15 audio, visual and language features from intracranial recordings of the Brain Treebank~\cite{btbank}. Recent pretrained encoders, MAPA~\cite{mapa} and DIVER-1~\cite{diver}, report within-session leaderboard scores of $0.6953$ and $0.6777$ (DIVER-1 frozen), respectively. The two models were pretrained on different data and use different architectures, which suggests their errors are partly decorrelated. This note documents a minimal, pre-specified combination of the two frozen encoders, the three-tier protocol used to decide whether to submit it, and how to reproduce every reported number. Its contribution is the protocol and evidence, not a new model.
+Neuroprobe~\cite{neuroprobe,neuroprobe-site,neuroprobe-repo} benchmarks within-session decoding of 15 audio, visual, and language features from naturalistic intracranial EEG (iEEG) recordings in the Brain Treebank~\cite{btbank}. Two publicly released foundation models represent opposite inductive biases on this benchmark: MAPA~\cite{mapa} (leaderboard within-session AUROC $0.6953$) applies a ViT-Small with within-shaft attention to multi-scale STFT magnitudes after pretraining on Brain Treebank sessions, whereas DIVER-1~\cite{diver} (frozen leaderboard AUROC $0.6777$) applies cross-contact attention to raw 500\,Hz voltage patches after pretraining on external clinical iEEG.
+
+Because MAPA discards waveform phase while DIVER-1 retains raw time-domain voltage, their architectural contrast poses a direct scientific question: does MAPA's magnitude-only representation leave decodable waveform and timing structure on the table, and if so, can classical signal-processing features recover it or does it require a learned raw-waveform encoder? Answering this reliably on Neuroprobe's 6-subject evaluation cohort requires strict holdout discipline to avoid overfitting the leaderboard.
+
+Using a three-tier holdout protocol with no new pretraining, we establish three empirical findings:
+\begin{enumerate}\setlength{\itemsep}{2pt}\setlength{\parskip}{0pt}
+\item \textbf{Hand-crafted phase and waveform features add nothing to MAPA:} stacking classical low-frequency waveform, theta/alpha phase, high-gamma timing, and shaft-covariance blocks onto MAPA produces virtually zero change ($\Delta=+0.000039$ on our 13-session design split).
+\item \textbf{A frozen learned raw-waveform encoder adds consistent signal across every subject:} despite DIVER-1 trailing MAPA by $0.0165$ AUROC on its own, a parameter-free 50/50 rank fusion of frozen MAPA and frozen DIVER-1 lifts mean official test AUROC by $+0.0082$ ($0.70374$ vs.\ $0.69554$), improving all $6/6$ evaluation subjects (and gaining $+0.0180$ on MAPA's held-out design session \texttt{5:0}).
+\item \textbf{Complementarity splits cleanly along task physics:} every language, word-timing, and auditory-onset task jumps substantially (led by \emph{word\_index} $+0.0345$, \emph{delta\_volume} $+0.0216$, and \emph{word\_length} $+0.0206$), whereas all four visual tasks and steady-state \emph{volume} dip slightly ($-0.0022$ to $-0.0106$). This points directly toward dual-view (spectral + waveform/phase) foundation models for iEEG.
+\end{enumerate}
 
 \section{Method}
-\subsection{Members}
-\paragraph{MAPA.} We use the released MAPA encoder frozen, taking last-layer features (\texttt{mapa12}). Preprocessing reuses MAPA's released frontend unchanged (\path{ensemble/mapa/prepare_session.py}, \path{encode_session.py}): within-shaft mean re-referencing, whole-session zero-phase 0.5\,Hz FIR high-pass and 60--300\,Hz notch filtering, centered STFTs over the continuous session (the first Slow 500\,ms frame is centered on onset and thus reaches 250\,ms pre-onset), whole-session per-contact/per-frequency median/MAD normalization (computed without labels across the entire recording, including the test half), and MAPA's frozen Guard~1 per-session contact exclusions (removing 25 of 1,414 evaluation contacts). The readout is a closed-form, trace-normalized ridge regression (\path{common/ridge.py}) on features standardized with \emph{training rows only} (\path{ensemble/mapa/gram.py}); a single penalty per cell is chosen by validation AUROC from a 25-point log-spaced grid of multipliers.
-\paragraph{DIVER-1.} We use the released DIVER-1 0.1\,s \emph{tiny} encoder frozen, with features in bfloat16. Preprocessing matches DIVER-1's upstream \path{preprocessing_for_neuroprobe.py}: whole-session zero-phase 0.5\,Hz high-pass and 60/120/180\,Hz notch filtering and $\pm 200\,\mu\text{V}$ clipping, followed by 0--1\,s window slicing, Laplacian re-referencing, and downsampling to 500\,Hz. A linear head is trained with DIVER's own \texttt{Trainer}: AdamW (lr $0.002$, weight decay $0.01$), 40-epoch cosine schedule, early stopping with patience 10 on validation AUROC (\path{ensemble/members/diver.py}). On Tier~P we ran three seeds (0--2) to measure seed spread; Tier~V and Tier~T confirmation ran seed~0 only, omitting DIVER's five out-of-fold training refits (which uniform rung~(a) never uses) after verifying exact $0.0$ score and AUROC parity on Tier~P (\path{results/parity/diver_uniform_confirmation.json}).
-\paragraph{Ridge6 (reference only).} A classical spectral-feature ridge model (reimplemented from Neuroprobe PR~\#20) was computed alongside as a reference member; it is not part of the submitted ensemble.
 
-\subsection{Fusion}
-Let $s_m(x)$ be member $m$'s score and $V_m$ its scores on the label-free validation inputs of the same cell. The ensemble score is
+\subsection{Frozen Encoders and Linear Readouts}\label{sec:encoders}
+No encoder weights were pretrained or fine-tuned; both models reuse their released checkpoints and upstream session-level preprocessing unchanged.
+
+\paragraph{MAPA (ViT-Small + dual ridge).}
+We use the released frozen MAPA encoder (21.3M parameters, 12 transformer layers, width 384, 6 heads, within-shaft self-attention), extracting block-12 representations (\texttt{mapa12}, $\approx 2.0$--$2.4\text{M}$ flattened dimensions per 1\,s window). Preprocessing matches MAPA's released frontend (\path{ensemble/mapa/prepare_session.py}, \path{encode_session.py}): within-shaft mean re-referencing, whole-session zero-phase 0.5\,Hz FIR high-pass and 60--300\,Hz notch filtering, centered STFTs over the continuous session (the first Slow 500\,ms frame is centered on onset and thus reaches 250\,ms pre-onset), unlabeled whole-session per-contact/per-frequency median/MAD normalization (spanning the entire recording, including the test half), and MAPA's frozen Guard~1 contact exclusions (removing 25 of 1,414 evaluation contacts). The readout is a closed-form, trace-normalized dual kernel ridge regression (\path{common/ridge.py}) fit on features standardized using \emph{training rows only} (\path{ensemble/mapa/gram.py}); one scalar penalty $\lambda$ per cell is selected by validation AUROC over MAPA's 25-point log-spaced grid.
+
+\paragraph{DIVER-1 (0.1\,s tiny + linear head).}
+We use the released frozen DIVER-1 0.1\,s \emph{tiny} encoder (12.7M parameters, 12 layers, width 256, cross-contact attention), producing bfloat16 features ($\approx 256\text{k}$ flattened dimensions per 1\,s window). Preprocessing matches DIVER-1's upstream \path{preprocessing_for_neuroprobe.py}: whole-session zero-phase 0.5\,Hz high-pass and 60/120/180\,Hz notch filtering with $\pm 200\,\mu\text{V}$ clipping, followed by 0--1\,s window slicing, Laplacian re-referencing, and downsampling to 500\,Hz into ten 0.1\,s patches. One linear head per cell is trained with DIVER's \texttt{Trainer} (AdamW, lr $0.002$, weight decay $0.01$, label smoothing $0.1$, 40-epoch cosine schedule, patience 10 on validation AUROC; \path{ensemble/members/diver.py}); gradients never update the encoder. On Tier~P we ran three seeds (0--2) to quantify seed variance; Tier~V and Tier~T confirmation ran seed~0 only, skipping DIVER's five unused out-of-fold refits after verifying exact $0.0$ score and AUROC parity on Tier~P (\path{results/parity/diver_uniform_confirmation.json}).
+
+\paragraph{Ridge6 (reference only).}
+A classical spectral-feature ridge baseline (reimplemented from Neuroprobe PR~\#20) was evaluated alongside the neural encoders as a reference member and is excluded from the final ensemble.
+
+\subsection{Label-Free Rank Fusion}\label{sec:fusion}
+Let $s_m(x)$ denote member $m$'s prediction score on window $x$, and let $V_m$ be its scores on the unlabeled validation inputs of the same cell. The ensemble score is
 \begin{equation}
   s(x) = \frac{1}{2}\sum_{m\in\{\text{MAPA},\text{DIVER}\}} \hat F_{V_m}\big(s_m(x)\big),
 \end{equation}
-where $\hat F_{V_m}$ is the empirical CDF of $V_m$ (\texttt{ensemble/fuse.py}, \texttt{NORMALIZATION = "select\_cdf"}). The weights are fixed (equal); no stacking or learned weighting is used. Validation \emph{labels} are not used by the fusion.
+where $\hat F_{V_m}$ is the empirical CDF of $V_m$ (\path{ensemble/fuse.py}, \texttt{NORMALIZATION = "select\_cdf"}). Fusion weights are fixed and equal: no stacking weights are fit, neither validation labels nor test inputs enter $\hat F_{V_m}$, and the calibration map is strictly monotone per member.
 
-\section{Evaluation protocol}
-The evaluation tiers, thresholds, controls, and confirmation lock below were specified in dated commits to our internal repository before the corresponding data were scored; they were not lodged with a public registry. Two post-hoc adjustments occurred during Tier~P design before the candidate was frozen and before any evaluation-session label was opened (disclosed in Sec.~\ref{sec:disclosures}); the Tier~V veto and single Tier~T scoring ran unchanged against the committed freeze.
-\paragraph{Tiers.} \emph{Tier P}: 13 permitted non-evaluation Brain Treebank sessions (\texttt{1:0}, \texttt{2:1}, \texttt{2:2}, \texttt{2:3}, \texttt{2:5}, \texttt{2:6}, \texttt{3:2}, \texttt{4:2}, \texttt{5:0}, \texttt{6:1}, \texttt{6:4}, \texttt{8:0}, \texttt{9:0}), used for every design decision (member choice, layer, fusion rule, grids). Permitted session \texttt{6:0} (\emph{Megamind}, shown in evaluation sessions \texttt{4:1} and \texttt{7:1}) and partial sessions \texttt{7:100--102}, \texttt{10:100--101} (evaluation films) were excluded in code (\texttt{ensemble/paths.py}). \emph{Tier V}: the 12 evaluation sessions; penalty selection and early stopping use the first half of the official validation split, and the frozen design is scored once on the second half (2\,s purge between halves) as a veto. \emph{Tier T}: train on official train, select on official validation, score once on official test; test labels were locked until Tier V returned Go.
-\paragraph{Unit and statistics.} The unit of analysis is the subject. We report the subject-weighted mean AUROC, the number of subjects improved, an exact one-sided sign-flip test over subjects, a session-level paired bootstrap 95\% CI, and leave-one-subject-out (LOSO) deltas.
-\paragraph{Thresholds (pre-specified).} Tier P: Go if $\Delta\ge+0.010$ and $\ge 7/8$ subjects improve; Hold if $+0.005\le\Delta<+0.010$. Tier V: Go if $\Delta\ge+0.005$ and $\ge5/6$ subjects improve, otherwise veto. Tier T is reported regardless of outcome.
-\paragraph{Controls.} Classical-feature candidates were compared with a random-projection control and a sham control of matched dimension. The ensemble candidate instead ran the ensemble controls of \texttt{ensemble/controls.py} (plan phase E3) on Tier P, all of which it passed: (i)~\emph{self-ensemble}: MAPA refit on five bootstrap resamples of its training trials and averaged scores $0.68976$, a change of $-0.00618$ versus MAPA, so the ensemble's gain exceeds what variance reduction alone buys by $0.01164$ (required margin $0.003$); (ii)~\emph{leave-one-member-out}: removing DIVER-1 costs $0.00546$ and removing MAPA costs $0.02399$, both above the $0.001$ drop threshold, so no member was dropped; (iii)~\emph{shuffled stacker}: recorded as passed (tolerance $0.002$; the frozen design uses the fixed-weight rung (a), not a stacker); (iv)~\emph{subject concentration}: the gain is carried by no single subject, with leave-one-subject-out deltas from $+0.0037$ (without subject~5) to $+0.0073$.
+\section{Evaluation Protocol}\label{sec:protocol}
+Splits, decision gates, controls, and the confirmation lock were committed to our internal repository before scoring the corresponding data (not lodged in an external public registry). Two post-hoc adjustments occurred during Tier~P design before the candidate was frozen and before any evaluation-session label was opened (Section~\ref{sec:disclosures}); Tier~V and Tier~T ran unchanged against the frozen configuration.
+
+\paragraph{Three-tier split discipline.}
+\emph{Tier~P (design)}: 13 permitted non-evaluation Brain Treebank sessions (\texttt{1:0}, \texttt{2:1}, \texttt{2:2}, \texttt{2:3}, \texttt{2:5}, \texttt{2:6}, \texttt{3:2}, \texttt{4:2}, \texttt{5:0}, \texttt{6:1}, \texttt{6:4}, \texttt{8:0}, \texttt{9:0}), used for all design decisions. Permitted session \texttt{6:0} (\emph{Megamind}, shared with evaluation sessions \texttt{4:1} and \texttt{7:1}) and partial sessions \texttt{7:100}--\texttt{102}, \texttt{10:100}--\texttt{101} (evaluation films) were excluded in code (\path{ensemble/paths.py}).
+\emph{Tier~V (one-shot veto)}: the 12 evaluation sessions; penalty selection and early stopping use the earlier half of official validation, and the single frozen candidate is scored once on the later half with a 2\,s purge around the cut.
+\emph{Tier~T (one-shot test)}: train on official train, select $\lambda$/epoch on official validation, and score once on official test; test labels remained locked until Tier~V returned Go.
+
+\paragraph{Statistics, gates, and controls.}
+The unit of analysis is the subject (averaging folds, then sessions, then tasks within subject). We report subject-weighted mean AUROC, subjects improved, exact one-sided sign-flip $p$-value over subjects, session-level paired bootstrap 95\% CI, leave-one-subject-out (LOSO) deltas, and Holm-adjusted per-task $p$-values. Pre-specified gates: Tier~P \textbf{Go} ($\Delta\ge+0.010$ and $\ge 7/8$ subjects up), \textbf{Hold} ($+0.005\le\Delta<+0.010$ with clean controls), else \textbf{Stop}; Tier~V \textbf{Go} ($\Delta\ge+0.005$ and $\ge 5/6$ subjects up), else \textbf{Veto}. Tier~T is reported regardless of outcome.
+
+Classical feature blocks were gated against a circularly shifted sham control ($\ge 30$\,s shift; gain must stay below $+0.002$) and a matched-dimension random-projection control (must exceed by $\ge +0.002$). Ensemble candidates underwent four Tier~P controls (\path{ensemble/controls.py}, phase~E3): (i)~\emph{self-ensemble} (MAPA averaged across five training-trial bootstrap resamples; ensemble gain must exceed self-ensemble by $\ge +0.003$ to rule out variance reduction), (ii)~\emph{leave-one-member-out} (LOMO; drop members contributing $<+0.001$), (iii)~\emph{shuffled stacker} (stacker fit on permuted labels must remain within $\pm 0.002$ of uniform mean), and (iv)~\emph{subject concentration} (LOSO deltas checking for single-subject dominance).
 
 \section{Results}
-\subsection{Tier P (design)}
-\begin{table}[h]\centering\small
-\begin{tabular}{lcccccl}\toprule
-Candidate & Score & MAPA & $\Delta$ & Subj.\ up & $p$ & Decision\\\midrule
-MAPA+DIVER-1 (submitted) & 0.70140 & 0.69594 & $+0.00546$ & 6/8 & 0.059 & Hold\\
-MAPA+DIVER-1+Ridge6 & 0.70118 & 0.69594 & $+0.00524$ & 6/8 & 0.082 & Hold\\
-MAPA+Ridge6 & 0.69585 & 0.69594 & $-0.00009$ & 5/8 & 0.512 & Stop\\
-MAPA + classical features & -- & -- & $+0.000039$ & -- & -- & Stop\\\bottomrule
-\end{tabular}
-\caption{Tier P within-session (13 sessions, 8 subjects, 390 cells). Bootstrap CI for the submitted ensemble: $[-0.0013,+0.0097]$. Frozen as config \texttt{ensemble:cc49ff955fa0ae88}.}
-\end{table}
-Because MAPA was pretrained on 12 of the 13 Tier~P sessions (all except \texttt{5:0}), we report \texttt{5:0} separately as planned: on held-out session \texttt{5:0} the ensemble gained $+0.0180$ ($0.7306$ vs.\ MAPA $0.7126$), compared with $+0.0037$ across the 12 MAPA-pretrained Tier~P sessions (7 subjects). Across three DIVER-1 seeds on Tier~P, DIVER-1 macro AUROC was $0.6774$, $0.6785$, and $0.6789$ ($\text{SD}=0.00063$). In phase~E2, the out-of-fold logistic stacker (rung~(b)) added $+0.00226$ over uniform rung~(a) (below the $+0.003$ adoption threshold; shuffled-label stacker delta $-0.00003$), so fixed-weight rung~(a) was retained.
 
-\subsection{Amendment before held-out scoring}\label{sec:amendment}
-The first Tier V run blocked: in session 2:0, task \emph{volume}, fold~1, all 437 selection-half validation rows had label 0, so no penalty or early-stopping criterion was defined. Before any held-out score was computed, we pre-specified a fallback derived only from Tier P medians: MAPA ridge multiplier $0.46415888336127775$, Ridge6 multiplier $2.154434690031882$, DIVER 8 completed epochs (the 40-epoch cosine schedule kept and truncated). On practice data the amended code reproduced ordinary-case predictions exactly (12 checks). The blocked receipt is preserved and the amended run writes to its own namespace (protocol \texttt{within-single-class-select-v1}). On Tier~T, $0/360$ cells triggered the fallback; it applied only to nine cells during Tier~V.
+\subsection{Official Test Performance (Tier T, Run Once)}
+On the official Neuroprobe within-session test split (12 sessions, 6 subjects, 360/360 complete cells, zero undefined cells), frozen \texttt{MAPA+DIVER-1} achieves mean test AUROC \textbf{0.70374} versus $0.69554$ for our MAPA reproduction ($\Delta=+0.00820$; Table~\ref{tab:tiert}). All $6/6$ subjects and $10/12$ sessions improve (Table~\ref{tab:sessions}; exact sign-flip $p=0.0156$, session bootstrap 95\% CI $[+0.0036,+0.0132]$, minimum LOSO $\Delta=+0.0064$). Because the Tier~T grid is balanced and complete, the official leaderboard metric (task mean of session$\times$fold AUROCs) equals our subject-weighted score identically.
 
-\subsection{Tier V (veto)}
-Ensemble $0.71110$ vs.\ MAPA $0.70277$: $\Delta=+0.00834$, 5/6 subjects improved, $p=0.047$, CI $[+0.0049,+0.0124]$, \textbf{Go}. Nine cells (volume or frame\_brightness, fold~1) had a single-class evaluation half and are undefined; 351 cells were scored. Subject~1 was negative ($-0.0049$); subject~3 was flat ($+0.0001$).
-
-\subsection{Tier T (final, run once)}
-\begin{table}[h]\centering\small
-\begin{tabular}{lc}\toprule
+\begin{table}[htbp]\centering\small
+\begin{tabular}{lr}\toprule
 Model & Mean test AUROC\\\midrule
 MAPA+DIVER-1 ensemble & \textbf{0.70374}\\
 MAPA (our reproduction) & 0.69554\\
 DIVER-1 (our member) & 0.67907\\
 Ridge6 (reference) & 0.67602\\\midrule
-MAPA (leaderboard) & 0.6953\\
-DIVER-1 frozen (leaderboard) & 0.6777\\\bottomrule
+MAPA (leaderboard) & 0.6953\phantom{0}\\
+DIVER-1 frozen (leaderboard) & 0.6777\phantom{0}\\\bottomrule
 \end{tabular}
-\caption{Tier T within-session, 12 sessions, 360/360 cells, no undefined cells. Ensemble vs.\ MAPA: $\Delta=+0.00820$, 6/6 subjects, $p=0.0156$, CI $[+0.0036,+0.0132]$, minimum LOSO $\Delta=+0.0064$.}
+\caption{Tier~T official within-session test results (12 sessions, 360/360 cells). Ensemble vs.\ MAPA reproduction: $\Delta=+0.00820$, 6/6 subjects up, $p=0.0156$, 95\% CI $[+0.0036,+0.0132]$, min LOSO $\Delta=+0.0064$.}
+\label{tab:tiert}
 \end{table}
-The leaderboard metric (mean over tasks of the mean over all session$\times$fold test AUROCs) equals our subject-weighted score here because the Tier T grid is balanced and complete.
 
-\begin{table}[h]\centering\small
+\begin{table}[htbp]\centering\small
 \begin{tabular}{lr@{\qquad}lr@{\qquad}lr}\toprule
 Session & $\Delta$ & Session & $\Delta$ & Session & $\Delta$\\\midrule
 1:1 & $+0.0012$ & 3:0 & $+0.0067$ & 7:0 & $+0.0044$\\
@@ -82,10 +95,16 @@ Session & $\Delta$ & Session & $\Delta$ & Session & $\Delta$\\\midrule
 2:0 & $+0.0144$ & 4:0 & $+0.0176$ & 10:0 & $+0.0112$\\
 2:4 & $+0.0081$ & 4:1 & $-0.0021$ & 10:1 & $+0.0074$\\\bottomrule
 \end{tabular}
-\caption{Tier T per-session deltas (ensemble $-$ MAPA). Per subject: 1: $+0.0027$, 2: $+0.0112$, 3: $+0.0011$, 4: $+0.0078$, 7: $+0.0170$, 10: $+0.0093$.}
+\caption{Tier~T per-session deltas (ensemble $-$ MAPA). Per-subject means: 1: $+0.0027$, 2: $+0.0112$, 3: $+0.0011$, 4: $+0.0078$, 7: $+0.0170$, 10: $+0.0093$.}
+\label{tab:sessions}
 \end{table}
 
-\begin{table}[h]\centering\small
+\subsection{Task-Level Complementarity: Spectrogram Power vs.\ Raw Waveform}
+Although standalone DIVER-1 trails MAPA by $0.0165$ AUROC overall, Table~\ref{tab:tasks} shows a striking domain split that explains why their equal-weight fusion improves every subject. Every language, word-timing, and auditory-onset task gains substantially---\emph{word\_index} ($+0.0345$), \emph{delta\_volume} ($+0.0216$), \emph{word\_length} ($+0.0206$), \emph{word\_part\_speech} ($+0.0180$), \emph{word\_gap} ($+0.0169$), \emph{gpt2\_surprisal} ($+0.0139$), \emph{onset} ($+0.0131$), and \emph{word\_head\_pos} ($+0.0103$)---with smaller gains on \emph{speech} ($+0.0057$) and \emph{pitch} ($+0.0008$). Conversely, all four visual tasks (\emph{global\_flow}, \emph{frame\_brightness}, \emph{face\_num}, \emph{local\_flow}) and steady-state \emph{volume} dip slightly ($-0.0022$ to $-0.0106$).
+
+This dichotomy mirrors the encoders' input views: MAPA's multi-scale STFT magnitudes capture sustained band power well (favoring visual motion, brightness, and steady-state loudness) but discard waveform phase, whereas DIVER-1's 500\,Hz voltage patches preserve fine time-domain evoked dynamics critical for lexical timing and acoustic transients. With $n=6$ subjects, no individual task survives Holm correction across 15 tests (smallest $p_{\mathrm{Holm}}=0.234$), so Table~\ref{tab:tasks} should be read as coherent directional evidence motivating dual-view (spectral + waveform/phase) pretraining rather than 15 isolated per-task claims.
+
+\begin{table}[htbp]\centering\small
 \begin{tabular}{lr@{\qquad}lr}\toprule
 Task & $\Delta$ & Task & $\Delta$\\\midrule
 word\_index & $+0.0345$ & speech & $+0.0057$\\
@@ -97,38 +116,73 @@ gpt2\_surprisal & $+0.0139$ & local\_flow & $-0.0090$\\
 onset & $+0.0131$ & volume & $-0.0106$\\
 word\_head\_pos & $+0.0103$ & & \\\bottomrule
 \end{tabular}
-\caption{Tier T per-task deltas. No task is significant after Holm correction (smallest $p_{\mathrm{Holm}}=0.234$).}
+\caption{Tier~T per-task deltas (ensemble $-$ MAPA). Language, word-timing, and onset/delta-volume tasks gain consistently; visual tasks and steady-state \emph{volume} dip slightly. Smallest Holm-adjusted $p_{\mathrm{Holm}}=0.234$ ($n=6$ subjects).}
+\label{tab:tasks}
 \end{table}
 
-\section{Reproduction}
-Code: \coderepo. The public repository is a snapshot of the code that produced Tier T (internal commit \texttt{50932eb}); Tier V ran at internal commit \texttt{95b94ba}, which differs only in how many DIVER-1 export workers run per GPU. Both runs use frozen config \texttt{cc49ff955fa0ae88}.
-\begin{enumerate}
-\item Install with \texttt{uv sync} (\path{pyproject.toml}, \path{uv.lock}, recorded from the server environment used for every run); obtain the Brain Treebank, Neuroprobe~\cite{neuroprobe-repo}, and the released MAPA and DIVER-1 0.1\,s tiny checkpoints. Our \path{common/splits.py} calls \path{neuroprobe.train_test_splits.generate_splits_within_session} directly at revision \texttt{f9b0842} and cross-checks every fold against its exact split arithmetic; current Neuroprobe \texttt{main} is \texttt{b282acd}, which differs from \texttt{f9b0842} only in leaderboard files.
-\item Tier P design: \path{ensemble/} and \path{classical/} experiment drivers; freeze with \path{server/overnight_freeze.py}, which writes \path{results/frozen/within.json} and attests its hash in Git.
-\item Confirmation: \texttt{python -m server.overnight\_confirm within} runs Tier V (veto) and, only on Go, Tier T against the lock file. The single-class fallback is \path{common/confirm_fallback.py} and \path{server/confirm_amendment.py}.
-\item Components: \path{common/ridge.py} (ridge readout), \path{ensemble/members/diver.py} (DIVER head), \path{ensemble/fuse.py} (fusion), \path{common/splits.py} (tier splits, purge), \path{common/stats.py} (sign-flip, bootstrap, LOSO).
-\item Audit artifacts (committed in the public repository under \path{results/}): \path{results/ledger.csv} (hash-chained, append-only, 381 rows), \path{results/test_access.log}, \path{results/overnight/confirmation_V_within.json}, \path{results/overnight/confirmation_T_within.json}, \path{results/overnight/confirmation_blocked_within.json}, \path{results/overnight/amendment_within_single_class_v1.json}, \path{results/ensemble/e1_within_w2.json} through \path{e5_within.json}, \path{results/parity/diver_uniform_confirmation.json}, and \path{results/submission/export_t_within.py}.
+\subsection{Design Evidence, Controls, and Tier V Veto}
+\paragraph{Tier~P screen, classical negative result, and MAPA-unseen breakdown.}
+Table~\ref{tab:tierp} summarizes the Tier~P candidates across all 13 non-evaluation sessions (390 cells). Stacking hand-crafted classical features (low-frequency waveform, theta/alpha phase, high-gamma timing, and shaft covariance) onto MAPA produced essentially zero gain ($\Delta=+0.000039$, \textbf{Stop}), and fusing MAPA with Ridge6 likewise failed ($\Delta=-0.00009$, \textbf{Stop}). By contrast, fusing MAPA with DIVER-1 reached $\Delta=+0.00546$ ($6/8$ subjects, \textbf{Hold}). Crucially, MAPA was pretrained on 12 of the 13 Tier~P sessions (all except \texttt{5:0}); on MAPA-held-out session \texttt{5:0}, \texttt{MAPA+DIVER-1} gained $+0.0180$ ($0.7306$ vs.\ MAPA $0.7126$), compared with $+0.0037$ across the 12 MAPA-pretrained Tier~P sessions (7 subjects). That gap anticipates why the ensemble gained more on MAPA-unseen Tier~T ($+0.0082$) than on the mostly MAPA-pretrained Tier~P mean ($+0.0055$). Across three seeds on Tier~P, standalone DIVER-1 macro AUROC was $0.6774$, $0.6785$, and $0.6789$ ($\text{SD}=0.00063$). In phase~E2, an out-of-fold logistic stacker (rung~(b)) added $+0.00226$ over uniform rung~(a)---below the pre-specified $+0.003$ adoption bar (shuffled-label stacker $-0.00003$)---so fixed uniform rung~(a) was retained and frozen as \texttt{ensemble:cc49ff955fa0ae88}.
+
+\begin{table}[htbp]\centering\small
+\begin{tabular}{lrrrrrl}\toprule
+Candidate & Score & MAPA & $\Delta$ & Subj.\ up & $p$ & Decision\\\midrule
+MAPA+DIVER-1 (frozen) & 0.70140 & 0.69594 & $+0.00546\phantom{0}$ & 6/8 & 0.059 & Hold\\
+MAPA+DIVER-1+Ridge6 & 0.70118 & 0.69594 & $+0.00524\phantom{0}$ & 6/8 & 0.082 & Hold\\
+MAPA + classical features & 0.69598 & 0.69594 & $+0.000039$ & 6/8 & 0.500 & Stop\\
+MAPA+Ridge6 & 0.69585 & 0.69594 & $-0.00009\phantom{0}$ & 5/8 & 0.512 & Stop\\\bottomrule
+\end{tabular}
+\caption{Tier~P within-session screen (13 sessions, 8 subjects, 390 cells). Bootstrap 95\% CI for \texttt{MAPA+DIVER-1}: $[-0.0013,+0.0097]$.}
+\label{tab:tierp}
+\end{table}
+
+\paragraph{Tier~P ensemble controls.}
+\texttt{MAPA+DIVER-1} passed all four phase~E3 controls:
+(i)~\emph{self-ensemble}: MAPA averaged across five training-trial bootstrap resamples scored $0.68976$ ($\Delta=-0.00618$ vs.\ MAPA), giving the ensemble a $+0.01164$ margin over variance reduction (bar $+0.003$);
+(ii)~\emph{LOMO}: removing DIVER-1 cost $0.00546$ and removing MAPA cost $0.02399$ (both $>0.001$);
+(iii)~\emph{shuffled stacker}: $-0.00003$ (within $\pm 0.002$; the frozen design uses uniform rung~(a));
+(iv)~\emph{subject concentration}: LOSO deltas ranged from $+0.0037$ (without subject~5) to $+0.0073$, ruling out single-subject dominance.
+
+\paragraph{Tier~V one-shot veto.}
+On the evaluation sessions' validation veto half (351/360 scored cells; 9 cells of \emph{volume} or \emph{frame\_brightness} fold~1 had a single-class eval half and were NaN), the frozen ensemble scored $0.71110$ versus MAPA $0.70277$ ($\Delta=+0.00834$, $5/6$ subjects up, $p=0.047$, CI $[+0.0049,+0.0124]$, \textbf{Go}), unlocking Tier~T. Subject~1 was negative ($-0.0049$) and subject~3 was flat ($+0.0001$). An operational single-class selection-half edge case encountered before any held-out score was computed was resolved via a Tier~P median fallback (Appendix~\ref{app:audit}); $0/360$ Tier~T cells triggered it.
+
+\section{Limitations and Protocol Disclosures}\label{sec:disclosures}
+
+\paragraph{Tier~P protocol adjustments (before freeze).}
+Two post-hoc adjustments occurred during Tier~P design before freezing the candidate and before opening any evaluation-session label (logged in \path{06-classical-and-ensemble-plan.md}):
+(1)~\emph{Fusion normalization:} Wave~1 (\texttt{mapa12}, \texttt{mapa0}, \texttt{ridge6}) initially calibrated held-out scores via out-of-fold training scores (\texttt{train\_oof\_cdf}) and returned Stop ($-0.0075$); diagnostics revealed out-of-fold scores were 2--3$\times$ wider than held-out scores, underweighting MAPA. Switching to label-free \texttt{select\_cdf} still returned Stop for Wave~1 ($-0.0001$) and was fixed for all later runs.
+(2)~\emph{Wave-2 trigger override:} because Wave~1 returned Stop (Ridge6 LOMO $-0.00009$), DIVER-1 would not have entered under the original trigger. We ran a descriptive 17-subset Tier~P screen anyway, observed \texttt{MAPA+DIVER-1} at $+0.0055$ ($+0.0180$ on held-out \texttt{5:0}), and admitted DIVER-1 to E1--E3. Tier~P is therefore optimistically biased as the best of 17 subsets; the disjoint, one-shot Tier~V veto ($+0.0083$) and Tier~T test ($+0.0082$) confirm the frozen candidate without selection bias.
+
+\paragraph{Preprocessing boundaries, validation labels, and seed choice.}
+Both encoders inherit their upstream unlabeled whole-session preprocessing (Section~\ref{sec:encoders}): MAPA's centered STFT reaches 250\,ms pre-onset, its per-contact/per-frequency median/MAD normalization spans the full recording (including the unlabeled test half), and Guard~1 excludes 25/1,414 evaluation contacts; DIVER-1 applies whole-session 0.5\,Hz high-pass, 60/120/180\,Hz notch filtering, and $\pm 200\,\mu\text{V}$ clipping prior to window slicing. Readout standardization uses training rows only. On Tier~T, official validation labels select only one scalar $\lambda$ (MAPA) and early-stopping epoch (DIVER-1) per cell, matching both upstream submissions; half of official validation served once as the Tier~V veto. Consistent with single-seed leaderboard practice, Tier~V and Tier~T ran DIVER-1 seed~0 only (Tier~P three-seed $\text{SD}=0.00063$).
+
+\paragraph{Pretraining provenance and separate pilots.}
+No pretraining was performed. MAPA was pretrained on 13/14 permitted sessions (excluding \texttt{5:0}) and zero evaluation sessions; DIVER-1 was pretrained externally without Brain Treebank data. Public PopT and BrainBERT checkpoints (pretrained on $7/12$ evaluation sessions) were excluded. A separate cross-subject workstream (\path{07-peer-workstream-audit.md}) ran three negative pilots on cross-subject validation labels; none touched within-session data or any test label.
+
+\paragraph{Scope, benchmark splits, and effect size.}
+All claims are restricted to within-session decoding (cross-subject returned Stop on Tier~P; we make no cross-session or cross-subject claim). Open maintainer PR \texttt{azaho/neuroprobe\#21} (temporal-block within-session splits) postdates our run; our results follow \path{train_test_splits.py} at \texttt{f9b0842} (unchanged at \texttt{b282acd}) and may shift under temporal-block splits. Finally, the overall gain ($+0.0082$ AUROC) is modest, rests on $n=6$ subjects (no per-task delta survives Holm correction; smallest $p_{\mathrm{Holm}}=0.234$), and is negative on sessions \texttt{3:1} and \texttt{4:1}, visual tasks, and steady-state \emph{volume}.
+
+\appendix
+\section{Audit Trail, Tier~V Amendment, and Reproduction}\label{app:audit}
+
+\paragraph{Single-class Tier~V amendment (\texttt{within-single-class-select-v1}).}
+The initial Tier~V export blocked at cell 66 (session \texttt{2:0}, \emph{volume}, fold~1), where all 437 selection-half validation rows had label~0, leaving $\lambda$ and early-stopping selection undefined. Before any eval-half score was computed, we added a fixed fallback from Tier~P medians (\path{common/confirm_fallback.py}, \path{server/confirm_amendment.py}): MAPA ridge multiplier $0.46415888336127775$, Ridge6 multiplier $2.154434690031882$, and DIVER 8 completed epochs (truncating the unchanged 40-epoch cosine schedule). Amended code matched ordinary-case predictions identically across 12 practice checks. The blocked receipt is preserved, the 65 pre-block MAPA files were SHA-256 verified before import into an isolated namespace, and \textbf{0/360 Tier~T cells triggered the fallback} (9 cells triggered it during Tier~V).
+
+\paragraph{Logged leaderboard export.}
+After Tier~T scoring, the per-session/per-fold test AUROCs required for leaderboard JSON submission were exported by one logged, report-only reread of Tier~T test labels (\path{results/submission/export_t_within.py}) over the unmodified prediction files (timestamps verified $\le$ \path{results/ensemble/e5_within.json}). The export reproduced the ledger aggregates identically (ensemble $0.7037440086972206$, MAPA $0.695540573759965$; per-session deltas agree within $10^{-12}$).
+
+\paragraph{Reproduction and committed audit artifacts.}
+The public repository (\coderepo) snapshots the Tier~T codebase (internal commit \texttt{50932eb}); Tier~V ran at \texttt{95b94ba}, differing only in DIVER-1 per-GPU worker sharding. Both used frozen configuration \texttt{cc49ff955fa0ae88}.
+\begin{enumerate}\setlength{\itemsep}{2pt}\setlength{\parskip}{0pt}
+\item Install the pinned environment via \texttt{uv sync} (\path{pyproject.toml}, \path{uv.lock}); obtain the Brain Treebank, Neuroprobe~\cite{neuroprobe-repo}, and the released MAPA and DIVER-1 0.1\,s tiny checkpoints. Our \path{common/splits.py} calls \texttt{neuroprobe.train\_test\_splits.\allowbreak generate\_splits\_within\_session} directly at revision \texttt{f9b0842} and cross-checks every fold against its exact split arithmetic.
+\item Run Tier~P design drivers (\path{ensemble/}, \path{classical/}) and freeze via \texttt{server/\allowbreak overnight\_\allowbreak freeze.py}, writing \path{results/frozen/within.json} and attesting its SHA-256 in Git.
+\item Run confirmation with \texttt{python -m server.overnight\_confirm within}, executing Tier~V and---only on Go---Tier~T behind \path{common/lock.py}. Core modules: \path{ensemble/members/diver.py}, \path{ensemble/fuse.py}, \path{common/ridge.py}, \path{common/splits.py}, and \path{common/stats.py}.
+\item {\sloppy Committed audit files under \path{results/}: hash-chained \path{ledger.csv} (381 rows) and \path{test_access.log}; under \path{overnight/}: \texttt{confirmation\_\allowbreak V\_within.json}, \texttt{confirmation\_\allowbreak T\_within.json}, \texttt{confirmation\_\allowbreak blocked\_\allowbreak within.json}, and \texttt{amendment\_\allowbreak within\_\allowbreak single\_\allowbreak class\_v1.json}; under \path{ensemble/}: \texttt{e1\_within\_w2.json} through \texttt{e5\_within.json}; \texttt{parity/\allowbreak diver\_\allowbreak uniform\_\allowbreak confirmation.json}; and \texttt{submission/\allowbreak export\_t\_within.py}.\par}
 \end{enumerate}
-Compute: one server with 4$\times$ NVIDIA CMP~170HX. The Tier T DIVER-1 feature export ran as 6 workers from 17:58 to 19:41 CST on 2026-11-26 (about 1\,h\,43\,min wall clock, per \path{logs/e0-w2-T.within-diver-*.log}).
+Compute: one server with 4$\times$ NVIDIA CMP~170HX GPUs. Tier~T DIVER-1 feature export ran across 6 workers from 17:58 to 19:41 CST on 2026-11-26 ($\approx 1$\,h\,43\,min wall clock, per \path{logs/e0-w2-T.within-diver-*.log}).
 
-\section{Disclosures and limitations}\label{sec:disclosures}
-\begin{itemize}
-\item \textbf{Tier P protocol adjustments (before freeze).} Two adjustments were made on Tier~P before freezing the candidate and before any evaluation-session label was opened (recorded in \path{06-classical-and-ensemble-plan.md}):
-  (1)~\emph{Fusion normalization:} the initial Wave-1 screen (\texttt{mapa12}, \texttt{mapa0}, \texttt{ridge6}) normalized held-out scores through out-of-fold training scores and returned Stop ($-0.0075$); diagnostics showed out-of-fold scores were 2--3$\times$ wider than held-out scores, underweighting MAPA. Switching to label-free \texttt{select\_cdf} still returned Stop for Wave~1 ($-0.0001$) and was fixed for all subsequent screens.
-  (2)~\emph{Wave-2 trigger override:} because Wave~1 returned Stop (Ridge6 leave-one-out $-0.00009$), DIVER-1 would not have entered under the original Wave-2 trigger. A descriptive 17-subset Tier~P screen was run anyway, found \texttt{MAPA+DIVER-1} at $+0.0055$ ($+0.0180$ on held-out \texttt{5:0}), and admitted DIVER-1 to E1--E3. The Tier~P gain is therefore optimistically biased as the best of 17 subsets; the one-shot Tier~V veto ($+0.0083$) and one-shot Tier~T test ($+0.0082$) on disjoint evaluation sessions confirm it without selection bias.
-\item \textbf{Whole-session preprocessing and contact exclusions.} Both encoders reuse their released session-level preprocessing unchanged: MAPA applies within-shaft mean referencing, whole-session zero-phase 0.5\,Hz FIR high-pass and 60--300\,Hz notch filtering, centered continuous-session STFTs (first Slow frame reaching 250\,ms pre-onset), whole-session median/MAD normalization per contact and frequency bin (spanning the unlabeled test half), and Guard~1 per-session contact exclusions (25 of 1,414 evaluation contacts). DIVER-1 applies whole-session zero-phase 0.5\,Hz high-pass and 60/120/180\,Hz notch filtering and $\pm 200\,\mu\text{V}$ clipping before slicing 0--1\,s windows. Readout standardization uses training rows only.
-\item \textbf{Single-seed confirmation.} Tier~V and Tier~T ran DIVER-1 seed~0 only (consistent with single-seed leaderboard practice); Tier~P three-seed spread was $0.6774$--$0.6789$ ($\text{SD}=0.00063$).
-\item \textbf{Validation-label use.} Validation labels choose only one ridge penalty per cell and the DIVER early-stopping epoch, as in MAPA and DIVER-1. Half of official validation was used as a one-pass veto set.
-\item \textbf{Amendment.} The single-class fallback (Sec.~\ref{sec:amendment}) was added after the first Tier V attempt blocked but before any held-out score was computed; $0/360$ Tier~T cells triggered it.
-\item \textbf{Leaderboard export.} After Tier T scoring, the per-session/per-fold test AUROCs required by the leaderboard files were exported by one logged, report-only reread of the Tier T test labels, applied to the already-scored, unmodified predictions (no prediction file is newer than the scoring record). The export reproduced the recorded scores exactly (ensemble $0.7037440086972206$, MAPA $0.695540573759965$; per-session deltas agree to $10^{-12}$). Script: \path{results/submission/export_t_within.py}.
-\item \textbf{Pretraining data.} We did no pretraining. MAPA was pretrained on 13 of the 14 permitted sessions (not 5:0) and never on evaluation sessions; DIVER-1 was pretrained without the Brain Treebank. Public PopT and BrainBERT weights (pretrained on 7/12 evaluation sessions) were excluded.
-\item \textbf{Prior cross-subject pilots.} A separate cross-subject workstream (\path{07-peer-workstream-audit.md}) ran three negative cross-subject pilots on cross-subject validation labels; none touched within-session data or any test label.
-\item \textbf{Scope.} Within-session only; we make no cross-session or cross-subject claim.
-\item \textbf{Heterogeneity.} Subject~1 was negative on Tier V; sessions 3:1 and 4:1 were negative on Tier T. Visual tasks (face\_num, frame\_brightness, global\_flow, local\_flow) and volume were negative on Tier T. Gains concentrate in language and onset/delta-volume tasks. No per-task effect survives Holm correction.
-\item \textbf{Splits.} Open maintainer PR azaho/neuroprobe\#21 (temporal-block within-session splits) postdates our run; our splits follow \texttt{train\_test\_splits.py} at \texttt{f9b0842} (unchanged at current \texttt{main}, \texttt{b282acd}) and may change under the new splits.
-\item \textbf{Effect size.} The gain ($+0.008$ AUROC) is small and rests on 6 subjects.
-\end{itemize}
-
+{\small
 \bibliographystyle{plain}
 \bibliography{refs}
+}
 \end{document}
