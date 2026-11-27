@@ -1,0 +1,24 @@
+# Ensemble track. Versions mirror `uv pip freeze` of ~/runs/neuroprobe-reproduction/.venv
+# on 2026-11-25 (its setup.sh says torch 2.6.0, the venv actually runs 2.15.0 with CUDA 13.2,
+# which is what its bench.log and every reproduced number used).
+# MAPA (dc582b2, extra [preprocessing]) and neuroprobe (f9b0842) are editable installs
+# done by server/setup.sh; DIVER-1 (25638eb) is imported from its source tree.
+torch==2.15.0
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.1
+h5py==3.16.0
+pandas==3.1.1
+tqdm==4.70.1
+psutil==7.2.2
+# MAPA preprocessing and DIVER-1 filtering
+mne==1.13.2
+# DIVER-1 model code
+mup==1.0.0
+einops==0.8.2
+hydra-core==1.3.8
+omegaconf==2.3.1
+jaxtyping==0.3.11
+warmup-scheduler==0.3
+# tests
+pytest

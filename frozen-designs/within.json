@@ -1,0 +1,44 @@
+{
+ "commit": "26190ff8c2c70d7cee42a7f89443e2ce5315ee1f",
+ "config_hash": "cc49ff955fa0ae88",
+ "considered": [
+  {
+   "config_hash": "3b8b741d540c0e3c",
+   "controls_pass": true,
+   "decision": "Stop",
+   "member": "mapa_plus_classical_base6+B3+B4",
+   "tier_p_gain": 3.8933954936197176e-05,
+   "track": "classical"
+  },
+  {
+   "config_hash": "cc49ff955fa0ae88",
+   "controls_pass": true,
+   "decision": "Hold",
+   "member": "ens_a__diver+mapa12",
+   "tier_p_gain": 0.005460275670046717,
+   "track": "ensemble"
+  }
+ ],
+ "controls_pass": true,
+ "decision": "Hold",
+ "frozen_at": "2026-11-26T18:32:22+00:00",
+ "frozen_by_commit": "6201eca1202fcc57665af3c7ad685d1d19db6ac0",
+ "member": "ens_a__diver+mapa12",
+ "regime": "within",
+ "spec": {
+  "baselines": [
+   "mapa12",
+   "ridge6"
+  ],
+  "members": [
+   "diver",
+   "mapa12"
+  ],
+  "normalization": "select_cdf",
+  "penalty": null,
+  "rung": "a",
+  "wave": 2
+ },
+ "tier_p_gain": 0.005460275670046717,
+ "track": "ensemble"
+}

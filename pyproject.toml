@@ -1,0 +1,99 @@
+[project]
+name = "neuroprobe-experiments"
+version = "0.1.0"
+description = "Classical and ensemble attempts on the NeuroProbe leaderboard"
+# Versions match ~/runs/neuroprobe-experiments/.venv on gpu (2026-11-26). torch 2.15.0 from
+# PyPI is the CUDA 13.2 build on Linux. DIVER-1 is imported from its source tree, not installed.
+requires-python = "==3.11.*"
+dependencies = [
+    "torch==2.15.0",
+    "torchvision==0.29.2",
+    "numpy==2.4.6",
+    "scipy==1.17.1",
+    "scikit-learn==1.9.1",
+    "pandas==3.1.1",
+    "h5py==3.16.0",
+    "tqdm==4.70.1",
+    "psutil==7.2.2",
+    "mne==1.13.2",
+    "mup==1.0.0",
+    "einops==0.8.2",
+    "hydra-core==1.3.8",
+    "omegaconf==2.3.1",
+    "jaxtyping==0.3.11",
+    "warmup-scheduler==0.3",
+    # Pinned upstreams, also fetched into <root>/src by server/setup.sh
+    "mapa[preprocessing]",
+    "neuroprobe",
+]
+
+[dependency-groups]
+dev = ["pytest==9.2.0"]
+
+[tool.uv]
+package = false
+# Pin transitive packages to the exact server environment.
+constraint-dependencies = [
+    "antlr4-python3-runtime==4.9.3",
+    "certifi==2026.11.20",
+    "charset-normalizer==3.5.3",
+    "cloudpickle==3.1.3",
+    "contourpy==1.3.3",
+    "cuda-bindings==13.5.0",
+    "cuda-pathfinder==1.9.1",
+    "cuda-toolkit==13.2.2",
+    "cycler==0.12.1",
+    "decorator==5.3.2",
+    "filelock==4.3.1",
+    "fonttools==4.69.1",
+    "fsspec==2026.9.0",
+    "idna==3.20",
+    "iniconfig==2.3.1",
+    "jinja2==3.1.6",
+    "joblib==1.6.0",
+    "kiwisolver==1.5.1",
+    "lazy-loader==0.6",
+    "markupsafe==3.0.4",
+    "matplotlib==3.11.2",
+    "mpmath==1.3.0",
+    "narwhals==2.29.0",
+    "networkx==3.6.1",
+    "nvidia-cublas==13.4.1.3",
+    "nvidia-cuda-cccl==13.3.5.0.6",
+    "nvidia-cuda-cupti==13.2.86",
+    "nvidia-cuda-nvrtc==13.2.86",
+    "nvidia-cuda-runtime==13.2.86",
+    "nvidia-cudnn-cu13==9.26.0.51",
+    "nvidia-cufft==12.2.0.57",
+    "nvidia-cufile==1.17.1.22",
+    "nvidia-cusolver==12.2.0.11",
+    "nvidia-cusparse==12.7.10.12",
+    "nvidia-cusparselt-cu13==0.8.1",
+    "nvidia-nccl-cu13==2.30.7",
+    "nvidia-nvjitlink==13.5.37",
+    "nvidia-nvshmem-cu13==3.7.2",
+    "nvidia-nvtx==13.2.86",
+    "packaging==26.4",
+    "pillow==13.0.0",
+    "platformdirs==4.14.8",
+    "pluggy==1.7.0",
+    "pooch==1.9.0",
+    "pygments==2.21.0",
+    "pyparsing==3.3.3",
+    "python-dateutil==4.0.0",
+    "pyyaml==6.0.4",
+    "requests==2.34.2",
+    "seaborn==0.13.2",
+    "setuptools==84.2.1",
+    "sympy==1.14.0",
+    "threadpoolctl==3.8.0",
+    "triton==3.9.0",
+    "typing-extensions==4.16.0",
+    "tzdata==2026.6",
+    "urllib3==2.8.0",
+    "wadler-lindig==0.1.8",
+]
+
+[tool.uv.sources]
+mapa = { git = "https://github.com/bentang18/MAPA", rev = "dc582b2ab18fa57dce3e88f15240f50d5727c1c1" }
+neuroprobe = { git = "https://github.com/insight-neuro/neuroprobe", rev = "f9b084241aeeaab548ca45ec98368b70141465a8" }

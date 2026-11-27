@@ -1,0 +1,7 @@
+# Classical track. Versions match the reproduction venv (uv pip freeze, 2026-11-25).
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.1
+pandas==3.1.1
+h5py==3.16.0
+pytest
