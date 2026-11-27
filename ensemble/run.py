@@ -1,4 +1,4 @@
-"""Ensemble track phases E0-E5 (see ``06-classical-and-ensemble-plan.md``).
+"""Ensemble track phases E0-E5 (see ``docs/06-classical-and-ensemble-plan.md``).
 
     python -m ensemble.run export  --tier P --regime within --members mapa12 mapa0 [--gpu-shard i/n]
     python -m ensemble.run e0      --tier P --regime within --wave 1

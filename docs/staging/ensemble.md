@@ -1,6 +1,6 @@
 # Ensemble track: what is staged and what is running
 
-Status on 2026-11-25. The plan is `06-classical-and-ensemble-plan.md` (phases E0–E5). Server root `~/runs/neuroprobe-experiments` (`$NPEXP_ROOT`).
+Status on 2026-11-25. The plan is `../06-classical-and-ensemble-plan.md` (phases E0–E5). Server root `~/runs/neuroprobe-experiments` (`$NPEXP_ROOT`).
 
 ## November 25 decision record (21:15 CST)
 

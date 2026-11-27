@@ -2,7 +2,7 @@
 # Build ~/runs/neuroprobe-experiments on the GPU server. Run ON the server after
 # server/sync.sh has copied the code:  bash ~/runs/neuroprobe-experiments/code/server/setup.sh
 # Modeled on ~/runs/neuroprobe-reproduction/setup.sh (same pinned MAPA and Neuroprobe
-# revisions; torch pinned to the version that venv ended up with, see its logs/setup.log).
+# revisions). The environment is the uv project in code/ (pyproject.toml + uv.lock).
 # CPU only; safe to re-run. Touches nothing under ~/runs/neuroprobe-reproduction.
 set -euo pipefail
 root=${NPEXP_ROOT:-$HOME/runs/neuroprobe-experiments}
@@ -26,14 +26,8 @@ fetch_rev() {  # dir url rev
 fetch_rev src/MAPA https://github.com/bentang18/MAPA "$MAPA_REV"
 fetch_rev src/neuroprobe https://github.com/insight-neuro/neuroprobe "$NEUROPROBE_REV"
 
-[[ -x .venv/bin/python ]] || uv venv --python 3.11 .venv
-export VIRTUAL_ENV="$root/.venv"
+UV_PROJECT_ENVIRONMENT="$root/.venv" uv sync --locked --project code
 py=.venv/bin/python
-uv pip install --python $py "torch==2.15.0" "torchvision==0.29.2"
-uv pip install --python $py -e 'src/MAPA[preprocessing]' -e src/neuroprobe
-for req in code/classical/requirements.txt code/ensemble/requirements.txt; do
-    if [[ -f "$req" ]]; then uv pip install --python $py -r "$req"; else echo "setup: $req not present, skipped"; fi
-done
 
 # data_dev is the merged ROOT_DIR_BRAINTREEBANK: read-only symlinks to everything the
 # reproduction already holds (metadata for all 26 sessions and the 12 evaluation

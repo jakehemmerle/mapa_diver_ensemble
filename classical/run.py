@@ -1,4 +1,4 @@
-"""Phases C0-C5 of the classical track (plan: 06-classical-and-ensemble-plan.md).
+"""Phases C0-C5 of the classical track (plan: docs/06-classical-and-ensemble-plan.md).
 
     python -m classical.run <c0|c1|c2|c3|c4|c5> [--regimes ...] [--dry-run] [--workers N]
 
@@ -56,7 +56,7 @@ MAPA_BASE = (("mapa", "12"), ("mapa", "0"))
 BASELINES = ("mapa12", "ridge6")
 REGIME_ORDER = ("within", "cross_subject", "cross_session")   # cross-session copies within's decisions
 GIB = 1024 ** 3
-# Cost model for --dry-run (see classical/STAGED.md for what is measured and what is assumed).
+# Cost model for --dry-run (see docs/staging/classical.md for what is measured and what is assumed).
 EXTRACT_CPU_S_PER_CHANNEL_KWINDOW = 1.1     # measured (server smoke, niced): window mode, one core, per channel
 #                                             per 1000 windows, recording read and normalization tiles included
 EXTRACT_CPU_S_PER_CHANNEL_SESSION = 20.0    # assumed, not measured: session mode, one core, per channel
